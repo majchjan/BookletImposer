@@ -1,3 +1,3 @@
-target/
+target
 .editorconfig
 dependency-reduced-pom.xml

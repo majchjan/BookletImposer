@@ -15,12 +15,25 @@ import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.util.Matrix;
 
 public final class App {
-
     public static void drawPage(PDPageContentStream contentStream, PDFormXObject page, boolean isLeft) throws Exception {
+
+
+        boolean isLandscape = page.getBBox().getWidth() > page.getBBox().getHeight();
+        float currentWidth = page.getBBox().getWidth();
+        float currentHeight = page.getBBox().getHeight();
+        
+        float scale = 1.0f;
+
+        if(isLandscape){
+            scale = (PDRectangle.A4.getHeight() / 2) / currentWidth;
+        } else {
+            scale = PDRectangle.A4.getWidth() / currentHeight;
+        }
+
         contentStream.saveGraphicsState();
         contentStream.transform(Matrix.getRotateInstance(Math.toRadians(-90), 0, 0));
-        contentStream.transform(Matrix.getTranslateInstance(isLeft ? - PDRectangle.A4.getHeight() : - PDRectangle.A4.getHeight() / 2, 0));
-        contentStream.transform(Matrix.getScaleInstance(1 / (float) Math.sqrt(2.0), 1 / (float) Math.sqrt(2.0)));
+        contentStream.transform(Matrix.getTranslateInstance(isLeft ? - PDRectangle.A4.getHeight() : - PDRectangle.A4.getHeight() / 2, (PDRectangle.A4.getWidth() - currentHeight * scale) / 2));
+        contentStream.transform(Matrix.getScaleInstance(scale, scale));                
         contentStream.drawForm(page);
         contentStream.restoreGraphicsState();
     }
