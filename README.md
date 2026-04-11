@@ -1,4 +1,4 @@
-# BookletImposer V1.0.0
+# BookletImposer V1.0.2
 
 Tool for converting A4 PDFs into A5 booklet printing layout for simlex and duplex printers.
 

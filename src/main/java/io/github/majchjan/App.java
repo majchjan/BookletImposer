@@ -15,25 +15,29 @@ import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.util.Matrix;
 
 public final class App {
-    public static void drawPage(PDPageContentStream contentStream, PDFormXObject page, boolean isLeft) throws Exception {
+    public static void drawPage(PDPageContentStream contentStream, PDFormXObject page, boolean isLeft, float margin) throws Exception {
 
+        /**
+         * TODO: Dodanie marginesu w mm do brzegu strony, w celu uniknięcia przycinania treści podczas drukowania.
+         * - przerobić jednostki z mm na punkty (1 mm = 2.83465 pt)
+         * */
 
-        boolean isLandscape = page.getBBox().getWidth() > page.getBBox().getHeight();
         float currentWidth = page.getBBox().getWidth();
         float currentHeight = page.getBBox().getHeight();
+        boolean isLandscape = currentWidth > currentHeight;
         
         float scale = 1.0f;
 
         if(isLandscape){
-            scale = (PDRectangle.A4.getHeight() / 2) / currentWidth;
+            scale = ((PDRectangle.A4.getHeight() / 2) - margin) / currentWidth;
         } else {
-            scale = PDRectangle.A4.getWidth() / currentHeight;
+            scale = (PDRectangle.A4.getWidth() - 2*margin) / currentHeight;
         }
 
         contentStream.saveGraphicsState();
         contentStream.transform(Matrix.getRotateInstance(Math.toRadians(-90), 0, 0));
-        contentStream.transform(Matrix.getTranslateInstance(isLeft ? - PDRectangle.A4.getHeight() : - PDRectangle.A4.getHeight() / 2, (PDRectangle.A4.getWidth() - currentHeight * scale) / 2));
-        contentStream.transform(Matrix.getScaleInstance(scale, scale));                
+        contentStream.transform(Matrix.getTranslateInstance(isLeft ? - PDRectangle.A4.getHeight() + margin : - (PDRectangle.A4.getHeight()/ 2), (PDRectangle.A4.getWidth() - currentHeight * scale) / 2));
+        contentStream.transform(Matrix.getScaleInstance(scale, scale));  
         contentStream.drawForm(page);
         contentStream.restoreGraphicsState();
     }
@@ -94,6 +98,10 @@ public final class App {
                 case "--isDuplexPrinter":
                     argMap.put("isDuplexPrinter", "true");
                     break;
+                // Dodanie odczytu zadanego marginesu
+                case "--margin":
+                    argMap.put("margin", args[++i]);
+                    break;
 
                 default:
                     throw new IllegalArgumentException(
@@ -108,6 +116,8 @@ public final class App {
         File inputFile = null;
         File outputFile = null;
         boolean isDuplexPrinter = false;
+        // Domyślny margines 15 pkt (około 5 mm)
+        float margin = 5 * 2.83465f; // Konwersja z mm na punkty
 
         try {
             Map<String, String> argMap = getArgumentValue(args);
@@ -119,6 +129,8 @@ public final class App {
             inputFile = new File(argMap.get("inputFilePath"));
             outputFile = new File(argMap.getOrDefault("outputFilePath", argMap.get("inputFilePath").substring(0, argMap.get("inputFilePath").lastIndexOf(".")) + "_booklet.pdf"));
             isDuplexPrinter = argMap.getOrDefault("isDuplexPrinter", "false").equalsIgnoreCase("true");
+            margin = Float.parseFloat(argMap.getOrDefault("margin", "5.0"));
+            margin *= 2.83465f; // Konwersja z mm na punkty
 
         } catch (IllegalArgumentException e) {
             System.err.println(e.getMessage());
@@ -175,13 +187,13 @@ public final class App {
                     if (leftIndex <= totalPages) {
                         PDFormXObject leftPage = layerUtility.importPageAsForm(input, leftIndex - 1);
                         
-                        drawPage(contentStream, leftPage, true);
+                        drawPage(contentStream, leftPage, true, margin);
                     }
 
                     if (rightIndex <= totalPages) {
                         PDFormXObject rightPage = layerUtility.importPageAsForm(input, rightIndex - 1);
 
-                        drawPage(contentStream, rightPage, false);
+                        drawPage(contentStream, rightPage, false, margin);
                     }
                 }
             }
